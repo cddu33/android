@@ -1235,6 +1235,7 @@
     <string name="aa_favorites_summary">Select your favorite entities to be shown in the app while viewing the Home Assistant driving interface</string>
     <string name="android_automotive">Android Automotive</string>
     <string name="android_automotive_favorites">Driving favorites</string>
+    <string name="aa_manage_favorites">Manage favorites</string>
     <string name="alarm_control_panels">Alarm Control Panels</string>
     <string name="state_triggered">Triggered</string>
     <string name="state_disarmed">Disarmed</string>

@@ -28,6 +28,7 @@ import io.homeassistant.companion.android.util.RegistriesDataHandler
 import io.homeassistant.companion.android.vehicle.ChangeServerScreen
 import io.homeassistant.companion.android.vehicle.DomainListScreen
 import io.homeassistant.companion.android.vehicle.EntityGridVehicleScreen
+import io.homeassistant.companion.android.vehicle.ManageFavoritesVehicleScreen
 import io.homeassistant.companion.android.vehicle.MapVehicleScreen
 import java.time.LocalDateTime
 import java.util.Locale
@@ -255,4 +256,35 @@ fun getDomainsGridItem(
             )
         }
     }
+}
+
+/**
+ * Creates a header [Action] that opens the [ManageFavoritesVehicleScreen], allowing the user
+ * to add or remove entities from the automotive favorites list. Intended for use in the header
+ * of automotive screens when the vehicle is parked.
+ */
+@RequiresApi(Build.VERSION_CODES.O)
+fun getManageFavoritesAction(
+    carContext: CarContext,
+    screenManager: ScreenManager,
+    serverManager: ServerManager,
+    serverId: StateFlow<Int>,
+    allEntities: Flow<Map<String, Entity>>,
+    prefsRepository: PrefsRepository,
+): Action {
+    return Action.Builder()
+        .setTitle(carContext.getString(R.string.aa_manage_favorites))
+        .setOnClickListener {
+            Timber.i("Manage favorites clicked")
+            screenManager.push(
+                ManageFavoritesVehicleScreen(
+                    carContext,
+                    serverManager,
+                    serverId,
+                    allEntities,
+                    prefsRepository,
+                ),
+            )
+        }
+        .build()
 }
