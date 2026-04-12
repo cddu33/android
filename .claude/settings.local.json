@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew assembleDebug)",
+      "Bash(./gradlew assembleMinimalDebug)",
+      "Bash(grep -r \"google-services\" app/build.gradle* app/build.gradle.kts)",
+      "Bash(ls app/*.json)",
+      "Bash(wait)"
+    ]
+  }
+}
