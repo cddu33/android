@@ -75,7 +75,6 @@ class DomainListScreen(
                     getManageFavoritesAction(
                         carContext,
                         screenManager,
-                        serverManager,
                         serverId,
                         allEntities,
                         prefsRepository,

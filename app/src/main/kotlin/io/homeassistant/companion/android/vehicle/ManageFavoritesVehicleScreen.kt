@@ -15,7 +15,6 @@ import io.homeassistant.companion.android.common.R as commonR
 import io.homeassistant.companion.android.common.data.integration.Entity
 import io.homeassistant.companion.android.common.data.prefs.AutoFavorite
 import io.homeassistant.companion.android.common.data.prefs.PrefsRepository
-import io.homeassistant.companion.android.common.data.servers.ServerManager
 import io.homeassistant.companion.android.util.vehicle.SUPPORTED_DOMAINS_WITH_STRING
 import io.homeassistant.companion.android.util.vehicle.getHeaderBuilder
 import kotlinx.coroutines.flow.Flow
@@ -34,7 +33,6 @@ import timber.log.Timber
 @RequiresApi(Build.VERSION_CODES.O)
 class ManageFavoritesVehicleScreen(
     carContext: CarContext,
-    private val serverManager: ServerManager,
     private val serverId: StateFlow<Int>,
     private val allEntities: Flow<Map<String, Entity>>,
     private val prefsRepository: PrefsRepository,

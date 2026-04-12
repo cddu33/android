@@ -267,7 +267,6 @@ fun getDomainsGridItem(
 fun getManageFavoritesAction(
     carContext: CarContext,
     screenManager: ScreenManager,
-    serverManager: ServerManager,
     serverId: StateFlow<Int>,
     allEntities: Flow<Map<String, Entity>>,
     prefsRepository: PrefsRepository,
@@ -279,7 +278,6 @@ fun getManageFavoritesAction(
             screenManager.push(
                 ManageFavoritesVehicleScreen(
                     carContext,
-                    serverManager,
                     serverId,
                     allEntities,
                     prefsRepository,
