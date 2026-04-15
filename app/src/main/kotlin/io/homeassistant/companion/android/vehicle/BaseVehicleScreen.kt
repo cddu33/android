@@ -13,15 +13,10 @@ abstract class BaseVehicleScreen(carContext: CarContext) : Screen(carContext) {
     private var car: Car? = null
     private var carRestrictionManager: CarUxRestrictionsManager? = null
     protected val isDrivingOptimized
-        get() = try {
-            (car?.getCarManager(Car.CAR_UX_RESTRICTION_SERVICE) as? CarUxRestrictionsManager)
-                ?.currentCarUxRestrictions
-                ?.isRequiresDistractionOptimization
-                ?: false
-        } catch (e: Exception) {
-            Timber.e(e, "Error getting UX Restrictions")
-            false
-        }
+        get() = carRestrictionManager
+            ?.currentCarUxRestrictions
+            ?.isRequiresDistractionOptimization
+            ?: false
 
     init {
         lifecycle.addObserver(object : DefaultLifecycleObserver {
