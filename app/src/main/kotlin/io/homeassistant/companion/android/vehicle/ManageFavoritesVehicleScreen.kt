@@ -73,6 +73,14 @@ class ManageFavoritesVehicleScreen(
     }
 
     override fun onDrivingOptimizedChanged(newState: Boolean) {
+        Timber.d("Etat conduite : $newState")
+        if (newState) {
+            // On utilise le scope lié au cycle de vie pour revenir sur le thread UI
+            lifecycleScope.launch {
+                Timber.i("Fermeture de l'écran car la voiture roule")
+                screenManager.pop()
+            }
+        }
         invalidate()
     }
 
