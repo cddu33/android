@@ -1235,6 +1235,10 @@
     <string name="aa_favorites_summary">Select your favorite entities to be shown in the app while viewing the Home Assistant driving interface</string>
     <string name="android_automotive">Android Automotive</string>
     <string name="android_automotive_favorites">Driving favorites</string>
+    <string name="aa_manage_favorites">Manage favorites</string>
+    <string name="aa_manage_favorites_parked_only">Managing favorites is only available when parked</string>
+    <string name="aa_previous_page">← Previous page</string>
+    <string name="aa_next_page">Next page →</string>
     <string name="alarm_control_panels">Alarm Control Panels</string>
     <string name="state_triggered">Triggered</string>
     <string name="state_disarmed">Disarmed</string>
@@ -1469,4 +1473,5 @@
     <string name="fail_to_navigate_to_uri">No app available to open %s</string>
     <string name="experimental">Experimental</string>
     <string name="learn_more">Learn more</string>
+    <string name="no_favorites_while_driving">" Not Allow on Driving"</string>
 </resources>

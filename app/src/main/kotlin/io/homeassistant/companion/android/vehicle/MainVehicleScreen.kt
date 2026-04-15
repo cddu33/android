@@ -30,6 +30,7 @@ import io.homeassistant.companion.android.util.vehicle.SUPPORTED_DOMAINS
 import io.homeassistant.companion.android.util.vehicle.getChangeServerGridItem
 import io.homeassistant.companion.android.util.vehicle.getDomainList
 import io.homeassistant.companion.android.util.vehicle.getHeaderBuilder
+import io.homeassistant.companion.android.util.vehicle.getManageFavoritesAction
 import io.homeassistant.companion.android.util.vehicle.getNavigationGridItem
 import io.homeassistant.companion.android.util.vehicle.nativeModeAction
 import kotlinx.coroutines.CancellationException
@@ -217,8 +218,20 @@ class MainVehicleScreen(
             }.build()
 
         val headerBuilder = carContext.getHeaderBuilder(commonR.string.app_name, Action.APP_ICON)
-        if (isAutomotive && !isDrivingOptimized && BuildConfig.FLAVOR != "full") {
-            headerBuilder.addEndHeaderAction(nativeModeAction(carContext))
+        if (isAutomotive && !isDrivingOptimized) {
+            if (BuildConfig.FLAVOR != "full") {
+                headerBuilder.addEndHeaderAction(nativeModeAction(carContext))
+            } else {
+                headerBuilder.addEndHeaderAction(
+                    getManageFavoritesAction(
+                        carContext,
+                        screenManager,
+                        serverId,
+                        allEntities,
+                        prefsRepository
+                    ),
+                )
+            }
         }
         headerBuilder.addEndHeaderAction(refreshAction)
 
