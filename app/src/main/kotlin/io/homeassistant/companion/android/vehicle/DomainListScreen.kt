@@ -6,6 +6,7 @@ import androidx.car.app.CarContext
 import androidx.car.app.model.GridTemplate
 import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
+import io.homeassistant.companion.android.BuildConfig
 import io.homeassistant.companion.android.common.R
 import io.homeassistant.companion.android.common.data.integration.Entity
 import io.homeassistant.companion.android.common.data.prefs.PrefsRepository
@@ -15,6 +16,7 @@ import io.homeassistant.companion.android.common.util.isAutomotive
 import io.homeassistant.companion.android.util.vehicle.SUPPORTED_DOMAINS
 import io.homeassistant.companion.android.util.vehicle.getDomainList
 import io.homeassistant.companion.android.util.vehicle.getHeaderBuilder
+import io.homeassistant.companion.android.util.vehicle.nativeModeAction
 import io.homeassistant.companion.android.util.vehicle.getManageFavoritesAction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -71,15 +73,19 @@ class DomainListScreen(
         return GridTemplate.Builder().apply {
             val headerBuilder = carContext.getHeaderBuilder(R.string.all_entities)
             if (isAutomotive && !isDrivingOptimized) {
-                headerBuilder.addEndHeaderAction(
-                    getManageFavoritesAction(
-                        carContext,
-                        screenManager,
-                        serverId,
-                        allEntities,
-                        prefsRepository,
-                    ),
-                )
+                if (BuildConfig.FLAVOR != "full") {
+                    headerBuilder.addEndHeaderAction(nativeModeAction(carContext))
+                } else {
+                    headerBuilder.addEndHeaderAction(
+                        getManageFavoritesAction(
+                            carContext,
+                            screenManager,
+                            serverId,
+                            allEntities,
+                            prefsRepository
+                        ),
+                    )
+                }
             }
             setHeader(headerBuilder.build())
             val domainBuild = domainList.build()

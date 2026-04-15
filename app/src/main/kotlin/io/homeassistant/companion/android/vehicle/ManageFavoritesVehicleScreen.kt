@@ -9,6 +9,9 @@ import androidx.car.app.model.ListTemplate
 import androidx.car.app.model.Row
 import androidx.car.app.model.Template
 import androidx.car.app.model.Toggle
+import androidx.car.app.model.Action
+import androidx.car.app.model.CarIcon
+import androidx.car.app.model.MessageTemplate
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -74,6 +77,22 @@ class ManageFavoritesVehicleScreen(
     }
 
     override fun onGetTemplate(): Template {
+        // LOGIQUE INVERSE : Si on roule, on affiche l'écran de restriction
+        if (!isDrivingOptimized) {
+            return MessageTemplate.Builder(
+                carContext.getString(commonR.string.no_favorites_while_driving)
+            )
+                .setHeader(carContext.getHeaderBuilder(commonR.string.android_automotive_favorites).build())
+                .setIcon(CarIcon.ERROR) // Utilise l'icône d'alerte
+                .addAction(
+                    Action.Builder()
+                        .setTitle(carContext.getString(commonR.string.close))
+                        .setOnClickListener { screenManager.pop() }
+                        .build()
+                )
+                .build()
+        }
+
         val listLimit = carContext.getCarService(ConstraintManager::class.java)
             .getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_LIST)
 
