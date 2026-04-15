@@ -12,16 +12,8 @@ import timber.log.Timber
 abstract class BaseVehicleScreen(carContext: CarContext) : Screen(carContext) {
     private var car: Car? = null
     private var carRestrictionManager: CarUxRestrictionsManager? = null
-    protected val isDrivingOptimized
-        get() = try {
-            (car?.getCarManager(Car.CAR_UX_RESTRICTION_SERVICE) as? CarUxRestrictionsManager)
-                ?.currentCarUxRestrictions
-                ?.isRequiresDistractionOptimization
-                ?: false
-        } catch (e: Exception) {
-            Timber.e(e, "Error getting UX Restrictions")
-            false
-        }
+    protected var isDrivingOptimized = false
+        private set
 
     init {
         lifecycle.addObserver(object : DefaultLifecycleObserver {
@@ -48,6 +40,7 @@ abstract class BaseVehicleScreen(carContext: CarContext) : Screen(carContext) {
                 car?.getCarManager(Car.CAR_UX_RESTRICTION_SERVICE) as? CarUxRestrictionsManager
             val listener =
                 CarUxRestrictionsManager.OnUxRestrictionsChangedListener { restrictions ->
+                    isDrivingOptimized = restrictions.isRequiresDistractionOptimization
                     onDrivingOptimizedChanged(restrictions.isRequiresDistractionOptimization)
                 }
             carRestrictionManager?.registerListener(listener)

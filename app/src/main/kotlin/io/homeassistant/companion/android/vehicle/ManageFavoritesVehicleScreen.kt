@@ -3,6 +3,7 @@ package io.homeassistant.companion.android.vehicle
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.car.app.CarContext
+import androidx.car.app.constraints.ConstraintManager
 import androidx.car.app.model.ItemList
 import androidx.car.app.model.ListTemplate
 import androidx.car.app.model.Row
@@ -41,13 +42,14 @@ class ManageFavoritesVehicleScreen(
     private var entities: List<Entity> = emptyList()
     private var favoritesList: List<AutoFavorite> = emptyList()
     private var isLoaded = false
+    private var page = 0
 
     init {
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 favoritesList = prefsRepository.getAutoFavorites()
                 allEntities.collect { entityMap ->
-                    entities = entityMap.values
+                    val newEntities = entityMap.values
                         .filter { it.domain in SUPPORTED_DOMAINS_WITH_STRING }
                         .sortedWith(
                             compareByDescending<Entity> { entity ->
@@ -56,6 +58,10 @@ class ManageFavoritesVehicleScreen(
                                 }
                             }.thenBy { it.attributes["friendly_name"]?.toString() ?: it.entityId },
                         )
+                    if (newEntities.map { it.entityId } != entities.map { it.entityId }) {
+                        page = 0
+                    }
+                    entities = newEntities
                     isLoaded = true
                     invalidate()
                 }
@@ -68,9 +74,34 @@ class ManageFavoritesVehicleScreen(
     }
 
     override fun onGetTemplate(): Template {
+        val listLimit = carContext.getCarService(ConstraintManager::class.java)
+            .getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_LIST)
+
+        // Always reserve 2 rows for navigation (Previous + Next) to keep a fixed itemsPerPage
+        // across all pages, avoiding index drift when navigating back and forth.
+        val itemsPerPage = (listLimit - 2).coerceAtLeast(1)
+
+        val fromIndex = page * itemsPerPage
+        val toIndex = minOf(fromIndex + itemsPerPage, entities.size)
+        val hasPreviousPage = page > 0
+        val hasNextPage = toIndex < entities.size
+        val pageEntities = if (isLoaded) entities.subList(fromIndex, toIndex) else emptyList()
+
         val listBuilder = ItemList.Builder()
 
-        entities.forEach { entity ->
+        if (hasPreviousPage) {
+            listBuilder.addItem(
+                Row.Builder()
+                    .setTitle(carContext.getString(commonR.string.aa_previous_page))
+                    .setOnClickListener {
+                        page--
+                        invalidate()
+                    }
+                    .build(),
+            )
+        }
+
+        pageEntities.forEach { entity ->
             val isFavorite = favoritesList.any {
                 it.serverId == serverId.value && it.entityId == entity.entityId
             }
@@ -106,6 +137,18 @@ class ManageFavoritesVehicleScreen(
                             .setChecked(isFavorite)
                             .build(),
                     )
+                    .build(),
+            )
+        }
+
+        if (hasNextPage) {
+            listBuilder.addItem(
+                Row.Builder()
+                    .setTitle(carContext.getString(commonR.string.aa_next_page))
+                    .setOnClickListener {
+                        page++
+                        invalidate()
+                    }
                     .build(),
             )
         }
