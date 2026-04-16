@@ -30,7 +30,6 @@ import kotlinx.coroutines.launch
  * This screen stays fully within the Car App API, making it compliant with Play Store
  * automotive distribution policies.
  */
-@RequiresApi(Build.VERSION_CODES.O)
 class ManageFavoritesVehicleScreen(
     carContext: CarContext,
     private val serverId: StateFlow<Int>,
