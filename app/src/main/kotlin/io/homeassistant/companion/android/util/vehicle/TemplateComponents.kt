@@ -89,7 +89,6 @@ fun getChangeServerGridItem(
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 fun getNavigationGridItem(
     carContext: CarContext,
     screenManager: ScreenManager,
