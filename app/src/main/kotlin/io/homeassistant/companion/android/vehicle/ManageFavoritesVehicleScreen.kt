@@ -133,10 +133,8 @@ class ManageFavoritesVehicleScreen(
                                     entityId = entity.entityId,
                                 )
                                 if (isChecked) {
-                                    Timber.d("Adding favorite")
                                     prefsRepository.addAutoFavorite(favorite)
                                 } else {
-                                    Timber.d("Removing favorite")
                                     val updated = favoritesList.filterNot { it == favorite }
                                     prefsRepository.setAutoFavorites(updated)
                                 }
