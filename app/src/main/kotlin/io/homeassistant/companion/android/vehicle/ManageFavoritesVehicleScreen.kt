@@ -49,13 +49,18 @@ class ManageFavoritesVehicleScreen(
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 favoritesList = prefsRepository.getAutoFavorites()
                 allEntities.collect { entityMap ->
+                    val currentServerId = serverId.value
+                    val favoriteEntityIds = favoritesList
+                        .asSequence()
+                        .filter { it.serverId == currentServerId }
+                        .map { it.entityId }
+                        .toSet()
+
                     val newEntities = entityMap.values
                         .filter { it.domain in SUPPORTED_DOMAINS_WITH_STRING }
                         .sortedWith(
                             compareByDescending<Entity> { entity ->
-                                favoritesList.any {
-                                    it.serverId == serverId.value && it.entityId == entity.entityId
-                                }
+                                favoriteEntityIds.contains(entity.entityId)
                             }.thenBy { it.attributes["friendly_name"]?.toString() ?: it.entityId },
                         )
                     if (newEntities.map { it.entityId } != entities.map { it.entityId }) {
