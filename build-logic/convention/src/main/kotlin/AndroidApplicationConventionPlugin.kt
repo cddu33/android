@@ -76,6 +76,11 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
                         isJniDebuggable = false
                         signingConfig = signingConfigs.getByName("release")
                     }
+                    create("beta") {
+                        initWith(getByName("release"))
+                        matchingFallbacks += listOf("release")
+                        applicationIdSuffix = ".beta"
+                    }
                 }
             }
         }
