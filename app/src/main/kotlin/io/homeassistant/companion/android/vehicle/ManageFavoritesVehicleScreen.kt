@@ -77,7 +77,6 @@ class ManageFavoritesVehicleScreen(
     override fun onDrivingOptimizedChanged(newState: Boolean) {
         if (newState) {
             lifecycleScope.launch {
-                Timber.i("Fermeture de l'écran car la voiture roule")
                 screenManager.pop()
             }
         }
