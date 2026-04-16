@@ -229,7 +229,7 @@ class MainVehicleScreen(
                         screenManager,
                         serverId,
                         allEntities,
-                        prefsRepository
+                        prefsRepository,
                     ),
                 )
             }
