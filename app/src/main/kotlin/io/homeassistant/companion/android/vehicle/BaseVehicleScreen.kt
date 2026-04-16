@@ -7,7 +7,6 @@ import androidx.car.app.Screen
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import io.homeassistant.companion.android.common.util.isAutomotive
-import timber.log.Timber
 
 abstract class BaseVehicleScreen(carContext: CarContext) : Screen(carContext) {
     private var car: Car? = null
