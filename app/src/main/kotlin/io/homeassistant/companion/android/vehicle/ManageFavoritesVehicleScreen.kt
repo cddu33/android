@@ -49,13 +49,18 @@ class ManageFavoritesVehicleScreen(
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 favoritesList = prefsRepository.getAutoFavorites()
                 allEntities.collect { entityMap ->
+                    val currentServerId = serverId.value
+                    val favoriteEntityIds = favoritesList
+                        .asSequence()
+                        .filter { it.serverId == currentServerId }
+                        .map { it.entityId }
+                        .toSet()
+
                     val newEntities = entityMap.values
                         .filter { it.domain in SUPPORTED_DOMAINS_WITH_STRING }
                         .sortedWith(
                             compareByDescending<Entity> { entity ->
-                                favoritesList.any {
-                                    it.serverId == serverId.value && it.entityId == entity.entityId
-                                }
+                                favoriteEntityIds.contains(entity.entityId)
                             }.thenBy { it.attributes["friendly_name"]?.toString() ?: it.entityId },
                         )
                     if (newEntities.map { it.entityId } != entities.map { it.entityId }) {
@@ -83,12 +88,14 @@ class ManageFavoritesVehicleScreen(
         val listLimit = carContext.getCarService(ConstraintManager::class.java)
             .getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_LIST)
 
-        val itemsPerPage = (listLimit - 2).coerceAtLeast(1)
-
-        val fromIndex = page * itemsPerPage
-        val toIndex = minOf(fromIndex + itemsPerPage, entities.size)
         val hasPreviousPage = page > 0
-        val hasNextPage = toIndex < entities.size
+        val reservedRowsWithoutNextPage = if (hasPreviousPage) 1 else 0
+        val maxItemsWithoutNextPage = (listLimit - reservedRowsWithoutNextPage).coerceAtLeast(1)
+        val fromIndex = page * maxItemsWithoutNextPage
+        val hasNextPage = fromIndex + maxItemsWithoutNextPage < entities.size
+        val reservedRows = reservedRowsWithoutNextPage + if (hasNextPage) 1 else 0
+        val itemsPerPage = (listLimit - reservedRows).coerceAtLeast(1)
+        val toIndex = minOf(fromIndex + itemsPerPage, entities.size)
         val pageEntities = if (isLoaded) entities.subList(fromIndex, toIndex) else emptyList()
 
         val listBuilder = ItemList.Builder()
@@ -127,10 +134,10 @@ class ManageFavoritesVehicleScreen(
                                     entityId = entity.entityId,
                                 )
                                 if (isChecked) {
-                                    Timber.d("Adding favorite: ${entity.entityId}")
+                                    Timber.d("Adding favorite")
                                     prefsRepository.addAutoFavorite(favorite)
                                 } else {
-                                    Timber.d("Removing favorite: ${entity.entityId}")
+                                    Timber.d("Removing favorite")
                                     val updated = favoritesList.filterNot { it == favorite }
                                     prefsRepository.setAutoFavorites(updated)
                                 }

@@ -5,12 +5,15 @@ import app.cash.turbine.test
 import io.homeassistant.companion.android.common.R as commonR
 import io.homeassistant.companion.android.common.util.AppVersion
 import io.homeassistant.companion.android.common.util.AppVersionProvider
+import io.homeassistant.companion.android.frontend.download.DownloadResult
+import io.homeassistant.companion.android.frontend.download.FrontendDownloadManager
 import io.homeassistant.companion.android.frontend.error.FrontendConnectionError
 import io.homeassistant.companion.android.frontend.externalbus.FrontendExternalBusRepository
 import io.homeassistant.companion.android.frontend.externalbus.WebViewScript
 import io.homeassistant.companion.android.frontend.externalbus.incoming.ConfigGetMessage
 import io.homeassistant.companion.android.frontend.externalbus.incoming.ConnectionStatusMessage
 import io.homeassistant.companion.android.frontend.externalbus.incoming.ConnectionStatusPayload
+import io.homeassistant.companion.android.frontend.externalbus.incoming.HandleBlobMessage
 import io.homeassistant.companion.android.frontend.externalbus.incoming.HapticMessage
 import io.homeassistant.companion.android.frontend.externalbus.incoming.HapticType
 import io.homeassistant.companion.android.frontend.externalbus.incoming.OpenAssistMessage
@@ -60,6 +63,7 @@ class FrontendMessageHandlerTest {
     private val threadManager: ThreadManager = mockk()
     private val appVersionProvider: AppVersionProvider = mockk()
     private val sessionManager: ServerSessionManager = mockk(relaxed = true)
+    private val downloadManager: FrontendDownloadManager = mockk(relaxed = true)
     private lateinit var handler: FrontendMessageHandler
 
     @BeforeEach
@@ -78,6 +82,7 @@ class FrontendMessageHandlerTest {
             threadManager = threadManager,
             appVersionProvider = appVersionProvider,
             sessionManager = sessionManager,
+            downloadManager = downloadManager,
             isAutomotive = false,
         )
     }
@@ -147,6 +152,7 @@ class FrontendMessageHandlerTest {
             threadManager = threadManager,
             appVersionProvider = appVersionProvider,
             sessionManager = sessionManager,
+            downloadManager = downloadManager,
             isAutomotive = false,
         )
 
@@ -184,6 +190,7 @@ class FrontendMessageHandlerTest {
             threadManager = threadManager,
             appVersionProvider = appVersionProvider,
             sessionManager = sessionManager,
+            downloadManager = downloadManager,
             isAutomotive = false,
         )
 
@@ -293,6 +300,7 @@ class FrontendMessageHandlerTest {
             threadManager = threadManager,
             appVersionProvider = appVersionProvider,
             sessionManager = sessionManager,
+            downloadManager = downloadManager,
             isAutomotive = true,
         )
 
@@ -324,6 +332,7 @@ class FrontendMessageHandlerTest {
             threadManager = threadManager,
             appVersionProvider = appVersionProvider,
             sessionManager = sessionManager,
+            downloadManager = downloadManager,
             isAutomotive = false,
         )
 
@@ -468,5 +477,22 @@ class FrontendMessageHandlerTest {
         handler.externalBus(message)
 
         coVerify { externalBusRepository.onMessageReceived(message) }
+    }
+
+    @Test
+    fun `Given handle blob message when messageResults then emits DownloadCompleted with result`() = runTest {
+        val testData = "data:application/pdf;base64,SGVsbG8="
+        val testFilename = "test.pdf"
+        coEvery { downloadManager.handleBlob(data = testData, filename = testFilename) } returns DownloadResult.Forwarded
+        every { externalBusRepository.incomingMessages() } returns flowOf(HandleBlobMessage(data = testData, filename = testFilename))
+
+        handler.messageResults().test {
+            val event = awaitItem()
+            assertTrue(event is FrontendHandlerEvent.DownloadCompleted)
+            assertEquals(DownloadResult.Forwarded, (event as FrontendHandlerEvent.DownloadCompleted).result)
+            expectNoEvents()
+        }
+
+        coVerify { downloadManager.handleBlob(data = testData, filename = testFilename) }
     }
 }

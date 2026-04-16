@@ -82,7 +82,7 @@ class DomainListScreen(
                             screenManager,
                             serverId,
                             allEntities,
-                            prefsRepository
+                            prefsRepository,
                         ),
                     )
                 }
