@@ -89,7 +89,6 @@ fun getChangeServerGridItem(
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 fun getNavigationGridItem(
     carContext: CarContext,
     screenManager: ScreenManager,
@@ -132,7 +131,6 @@ fun getNavigationGridItem(
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 fun getDomainList(
     domains: MutableSet<String>,
     carContext: CarContext,
@@ -218,7 +216,6 @@ fun getDomainList(
     return listBuilder
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 fun getDomainsGridItem(
     carContext: CarContext,
     screenManager: ScreenManager,
@@ -263,7 +260,6 @@ fun getDomainsGridItem(
  * to add or remove entities from the automotive favorites list. Intended for use in the header
  * of automotive screens when the vehicle is parked.
  */
-@RequiresApi(Build.VERSION_CODES.O)
 fun getManageFavoritesAction(
     carContext: CarContext,
     screenManager: ScreenManager,
