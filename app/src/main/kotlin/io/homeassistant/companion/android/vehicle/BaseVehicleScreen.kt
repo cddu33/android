@@ -40,7 +40,6 @@ abstract class BaseVehicleScreen(carContext: CarContext) : Screen(carContext) {
             car = Car.createCar(carContext)
             carRestrictionManager =
                 car?.getCarManager(Car.CAR_UX_RESTRICTION_SERVICE) as? CarUxRestrictionsManager
-            val initialState = carRestrictionManager?.currentCarUxRestrictions?.isRequiresDistractionOptimization ?: false
             val listener =
                 CarUxRestrictionsManager.OnUxRestrictionsChangedListener { restrictions ->
                     onDrivingOptimizedChanged(restrictions.isRequiresDistractionOptimization)
