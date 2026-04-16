@@ -38,11 +38,7 @@ gradle.lockfile merge=union
 
 # Protect build and version files on this branch — always keep our version when merging
 # The 'keepours' driver must be configured locally: git config merge.keepours.driver true
-gradle/libs.versions.toml merge=keepours
-gradle/wrapper/gradle-wrapper.properties merge=keepours
-build.gradle.kts merge=keepours
-settings.gradle.kts merge=keepours
-app/build.gradle.kts merge=keepours
+app/src/beta/res/values/strings.xml merge=keepours
+build-logic/convention/src/main/kotlin/AndroidApplicationConventionPlugin.kt merge=keepours
+automotive/src/main/AndroidManifest.xml merge=keepours
 automotive/build.gradle.kts merge=keepours
-wear/build.gradle.kts merge=keepours
-common/build.gradle.kts merge=keepours
