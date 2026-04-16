@@ -35,3 +35,14 @@ gradle.lockfile merge=union
 # Handle Android Studio specific files
 *.iml text
 *.idea/** text
+
+# Protect build and version files on this branch — always keep our version when merging
+# The 'keepours' driver must be configured locally: git config merge.keepours.driver true
+gradle/libs.versions.toml merge=keepours
+gradle/wrapper/gradle-wrapper.properties merge=keepours
+build.gradle.kts merge=keepours
+settings.gradle.kts merge=keepours
+app/build.gradle.kts merge=keepours
+automotive/build.gradle.kts merge=keepours
+wear/build.gradle.kts merge=keepours
+common/build.gradle.kts merge=keepours
