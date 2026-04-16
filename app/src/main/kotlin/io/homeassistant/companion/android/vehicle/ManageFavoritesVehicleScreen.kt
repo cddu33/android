@@ -133,14 +133,21 @@ class ManageFavoritesVehicleScreen(
                                     entityId = entity.entityId,
                                 )
                                 if (isChecked) {
-                                    Timber.d("Adding favorite")
                                     prefsRepository.addAutoFavorite(favorite)
                                 } else {
-                                    Timber.d("Removing favorite")
                                     val updated = favoritesList.filterNot { it == favorite }
                                     prefsRepository.setAutoFavorites(updated)
                                 }
                                 favoritesList = prefsRepository.getAutoFavorites()
+                                val favoriteEntityIds = favoritesList
+                                    .filter { it.serverId == serverId.value }
+                                    .map { it.entityId }
+                                    .toSet()
+                                entities = entities.sortedByDescending { updatedEntity ->
+                                    updatedEntity.entityId in favoriteEntityIds
+                                }
+                                val maxPage = if (entities.isEmpty()) 0 else (entities.size - 1) / listLimit
+                                page = page.coerceIn(minimumValue = 0, maximumValue = maxPage)
                                 invalidate()
                             }
                         }
