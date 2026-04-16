@@ -313,6 +313,25 @@ class FrontendJsBridge @AssistedInject constructor(
         const val EXTERNAL_APP_V2_LISTENER = "externalAppV2"
 
         /**
+         * Returns a JS `function()` expression that sends [jsonPayload] through the external bus.
+         *
+         * The returned string is a complete `function() { ... }` expression that can be used
+         * directly as a callback.
+         *
+         * For V1: calls `window.externalApp.externalBus(...)` directly.
+         * For V2: posts a `{type:'externalBus', payload:...}` message via `window.externalAppV2`.
+         */
+        fun externalBusCallback(jsonPayload: String): String = """
+        function() {
+            if (typeof window.$EXTERNAL_APP_V2_LISTENER !== 'undefined') {
+                window.$EXTERNAL_APP_V2_LISTENER.postMessage(JSON.stringify({type:'externalBus',payload:$jsonPayload}));
+            } else {
+                window.$EXTERNAL_APP_V1.externalBus(JSON.stringify($jsonPayload));
+            }
+        }
+        """.trimIndent()
+
+        /**
          * Whether this server supports the V2 bridge protocol.
          *
          * V2 was introduced in Home Assistant 2026.4.2.
