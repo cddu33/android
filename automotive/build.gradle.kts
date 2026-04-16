@@ -71,6 +71,11 @@ android {
                 directories += "../app/src/debug/res"
             }
         }
+        getByName("beta") {
+            res {
+                directories += "../app/src/beta/res"
+            }
+        }
         getByName("release") {
             kotlin {
                 directories += "../app/src/release/kotlin"
