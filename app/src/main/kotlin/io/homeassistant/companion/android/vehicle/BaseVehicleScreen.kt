@@ -37,7 +37,6 @@ abstract class BaseVehicleScreen(carContext: CarContext) : Screen(carContext) {
 
     private fun registerAutomotiveRestrictionListener() {
         if (carContext.isAutomotive()) {
-            Timber.d("Register for Automotive Restrictions")
             car = Car.createCar(carContext)
             carRestrictionManager =
                 car?.getCarManager(Car.CAR_UX_RESTRICTION_SERVICE) as? CarUxRestrictionsManager
