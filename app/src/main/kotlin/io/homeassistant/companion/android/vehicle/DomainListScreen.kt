@@ -13,11 +13,11 @@ import io.homeassistant.companion.android.common.data.prefs.PrefsRepository
 import io.homeassistant.companion.android.common.data.servers.ServerManager
 import io.homeassistant.companion.android.common.data.websocket.impl.entities.EntityRegistryResponse
 import io.homeassistant.companion.android.common.util.isAutomotive
-import io.homeassistant.companion.android.util.vehicle.getDomainList
-import io.homeassistant.companion.android.util.vehicle.getManageFavoritesAction
-import io.homeassistant.companion.android.util.vehicle.getHeaderBuilder
-import io.homeassistant.companion.android.util.vehicle.nativeModeAction
 import io.homeassistant.companion.android.util.vehicle.SUPPORTED_DOMAINS
+import io.homeassistant.companion.android.util.vehicle.getDomainList
+import io.homeassistant.companion.android.util.vehicle.getHeaderBuilder
+import io.homeassistant.companion.android.util.vehicle.getManageFavoritesAction
+import io.homeassistant.companion.android.util.vehicle.nativeModeAction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
