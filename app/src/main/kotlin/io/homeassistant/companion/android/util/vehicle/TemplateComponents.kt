@@ -131,7 +131,6 @@ fun getNavigationGridItem(
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 fun getDomainList(
     domains: MutableSet<String>,
     carContext: CarContext,
