@@ -21,7 +21,6 @@ import io.homeassistant.companion.android.util.vehicle.getHeaderBuilder
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import timber.log.Timber
 
 /**
  * A Car App screen that allows users to manage their automotive favorites when the vehicle is
