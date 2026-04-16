@@ -36,16 +36,22 @@ abstract class BaseVehicleScreen(carContext: CarContext) : Screen(carContext) {
     abstract fun onDrivingOptimizedChanged(newState: Boolean)
 
     private fun registerAutomotiveRestrictionListener() {
+        Timber.d("registerAutomotiveRestrictionListener: isAutomotive=${carContext.isAutomotive()}")
         if (carContext.isAutomotive()) {
             Timber.i("Register for Automotive Restrictions")
             car = Car.createCar(carContext)
             carRestrictionManager =
                 car?.getCarManager(Car.CAR_UX_RESTRICTION_SERVICE) as? CarUxRestrictionsManager
+            Timber.d("carRestrictionManager=$carRestrictionManager")
+            val initialState = carRestrictionManager?.currentCarUxRestrictions?.isRequiresDistractionOptimization ?: false
+            Timber.d("Initial isDrivingOptimized=$initialState")
             val listener =
                 CarUxRestrictionsManager.OnUxRestrictionsChangedListener { restrictions ->
+                    Timber.d("UxRestrictions changed: isRequiresDistractionOptimization=${restrictions.isRequiresDistractionOptimization}")
                     onDrivingOptimizedChanged(restrictions.isRequiresDistractionOptimization)
                 }
             carRestrictionManager?.registerListener(listener)
+            invalidate()
         }
     }
 }

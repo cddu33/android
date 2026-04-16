@@ -218,6 +218,7 @@ class MainVehicleScreen(
             }.build()
 
         val headerBuilder = carContext.getHeaderBuilder(commonR.string.app_name, Action.APP_ICON)
+        Timber.d("onGetTemplate: isAutomotive=$isAutomotive isDrivingOptimized=$isDrivingOptimized")
         if (isAutomotive && !isDrivingOptimized) {
             if (BuildConfig.FLAVOR != "full") {
                 headerBuilder.addEndHeaderAction(nativeModeAction(carContext))
