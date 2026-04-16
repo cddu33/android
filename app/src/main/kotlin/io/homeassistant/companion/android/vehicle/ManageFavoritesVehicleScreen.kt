@@ -88,12 +88,14 @@ class ManageFavoritesVehicleScreen(
         val listLimit = carContext.getCarService(ConstraintManager::class.java)
             .getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_LIST)
 
-        val itemsPerPage = (listLimit - 2).coerceAtLeast(1)
-
-        val fromIndex = page * itemsPerPage
-        val toIndex = minOf(fromIndex + itemsPerPage, entities.size)
         val hasPreviousPage = page > 0
-        val hasNextPage = toIndex < entities.size
+        val reservedRowsWithoutNextPage = if (hasPreviousPage) 1 else 0
+        val maxItemsWithoutNextPage = (listLimit - reservedRowsWithoutNextPage).coerceAtLeast(1)
+        val fromIndex = page * maxItemsWithoutNextPage
+        val hasNextPage = fromIndex + maxItemsWithoutNextPage < entities.size
+        val reservedRows = reservedRowsWithoutNextPage + if (hasNextPage) 1 else 0
+        val itemsPerPage = (listLimit - reservedRows).coerceAtLeast(1)
+        val toIndex = minOf(fromIndex + itemsPerPage, entities.size)
         val pageEntities = if (isLoaded) entities.subList(fromIndex, toIndex) else emptyList()
 
         val listBuilder = ItemList.Builder()
