@@ -1,5 +1,7 @@
 package io.homeassistant.companion.android.util.vehicle
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.annotation.StringRes
 import androidx.car.app.CarContext
 import androidx.car.app.ScreenManager
@@ -87,6 +89,7 @@ fun getChangeServerGridItem(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 fun getNavigationGridItem(
     carContext: CarContext,
     screenManager: ScreenManager,
