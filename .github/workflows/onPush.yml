@@ -67,7 +67,7 @@ jobs:
           VERSION_CODE: ${{ steps.rel_number.outputs.version-code }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
-          ./gradlew :common:assemble :app:assembleRelease :app:assembleFullBeta :wear:assembleRelease :automotive:assembleRelease :automotive:assembleFullBeta
+          ./gradlew :common:assemble :app:assembleRelease :wear:assembleRelease :automotive:assembleRelease
 
       - name: Archive Build
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -188,7 +188,7 @@ jobs:
           VERSION_CODE: ${{ steps.rel_number.outputs.version-code }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
-          ./gradlew :common:assemble :app:bundleFullRelease :app:bundleFullBeta :wear:bundleRelease :automotive:bundleFullRelease :automotive:bundleFullBeta
+          ./gradlew :common:assemble :app:bundleFullRelease :wear:bundleRelease :automotive:bundleFullRelease
 
       - name: Archive Build
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
