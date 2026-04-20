@@ -33,4 +33,15 @@ sealed interface FrontendEvent {
 
     /** Open a URI externally using the host-provided external link handler. */
     data class OpenExternalLink(val uri: Uri) : FrontendEvent
+
+    /** Navigate to the developer tools settings screen */
+    data object NavigateToDeveloperSettings : FrontendEvent
+
+    /**
+     * Show a bottom sheet letting the user pick among registered servers.
+     *
+     * Only emitted when there is more than one registered server; the host is responsible
+     * for forwarding the user's selection back to the ViewModel via [FrontendViewModel.switchServer].
+     */
+    data object ShowServerSwitcher : FrontendEvent
 }
