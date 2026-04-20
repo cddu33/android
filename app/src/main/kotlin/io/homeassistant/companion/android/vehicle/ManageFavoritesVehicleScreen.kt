@@ -1,7 +1,5 @@
 package io.homeassistant.companion.android.vehicle
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.car.app.CarContext
 import androidx.car.app.constraints.ConstraintManager
 import androidx.car.app.model.ItemList

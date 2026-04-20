@@ -1,7 +1,5 @@
 package io.homeassistant.companion.android.util.vehicle
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.annotation.StringRes
 import androidx.car.app.CarContext
 import androidx.car.app.ScreenManager
