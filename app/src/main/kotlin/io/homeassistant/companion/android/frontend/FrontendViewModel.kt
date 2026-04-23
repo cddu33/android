@@ -14,6 +14,8 @@ import io.homeassistant.companion.android.frontend.download.DownloadResult
 import io.homeassistant.companion.android.frontend.download.FrontendDownloadManager
 import io.homeassistant.companion.android.frontend.error.FrontendConnectionError
 import io.homeassistant.companion.android.frontend.error.FrontendConnectionErrorStateProvider
+import io.homeassistant.companion.android.frontend.externalbus.FrontendExternalBusRepository
+import io.homeassistant.companion.android.frontend.externalbus.outgoing.ResultMessage
 import io.homeassistant.companion.android.frontend.gesture.FrontendGestureHandler
 import io.homeassistant.companion.android.frontend.gesture.GestureResult
 import io.homeassistant.companion.android.frontend.handler.FrontendBusObserver
@@ -69,6 +71,7 @@ internal class FrontendViewModel @VisibleForTesting constructor(
     initialPath: String?,
     webViewClientFactory: HAWebViewClientFactory,
     private val frontendBusObserver: FrontendBusObserver,
+    private val externalBusRepository: FrontendExternalBusRepository,
     private val urlManager: FrontendUrlManager,
     private val connectivityCheckRepository: ConnectivityCheckRepository,
     private val permissionManager: PermissionManager,
@@ -83,6 +86,7 @@ internal class FrontendViewModel @VisibleForTesting constructor(
         savedStateHandle: SavedStateHandle,
         webViewClientFactory: HAWebViewClientFactory,
         frontendBusObserver: FrontendBusObserver,
+        externalBusRepository: FrontendExternalBusRepository,
         urlManager: FrontendUrlManager,
         connectivityCheckRepository: ConnectivityCheckRepository,
         permissionManager: PermissionManager,
@@ -94,6 +98,7 @@ internal class FrontendViewModel @VisibleForTesting constructor(
         initialPath = savedStateHandle.toRoute<FrontendRoute>().path,
         webViewClientFactory = webViewClientFactory,
         frontendBusObserver = frontendBusObserver,
+        externalBusRepository = externalBusRepository,
         urlManager = urlManager,
         connectivityCheckRepository = connectivityCheckRepository,
         permissionManager = permissionManager,
@@ -325,6 +330,24 @@ internal class FrontendViewModel @VisibleForTesting constructor(
     }
 
     /**
+     * Called by the host after the NFC tag-write flow completes.
+     *
+     * Sends a `result` response back to the frontend correlated by [messageId]. Matches the legacy
+     * behavior of always reporting `success = true` with an empty payload: the underlying
+     * `NfcSetupActivity` only returns a non-zero result code on successful write, and the frontend
+     * silently ignores responses whose id it no longer tracks.
+     *
+     * @param messageId The correlation id received back from the activity result. Corresponds to
+     *   the id of the originating `tag/write` request on success, or `0` (`RESULT_CANCELED`) on
+     *   cancellation.
+     */
+    fun onNfcWriteCompleted(messageId: Int) {
+        viewModelScope.launch {
+            externalBusRepository.send(ResultMessage.success(messageId))
+        }
+    }
+
+    /**
      * Handles a swipe gesture detected on the WebView.
      *
      * @param direction The swipe direction
@@ -424,6 +447,10 @@ internal class FrontendViewModel @VisibleForTesting constructor(
 
             is FrontendHandlerEvent.DownloadCompleted -> {
                 handleDownloadResult(result.result)
+            }
+
+            is FrontendHandlerEvent.WriteNfcTag -> {
+                _events.tryEmit(FrontendEvent.NavigateToNfcWrite(messageId = result.messageId, tagId = result.tagId))
             }
 
             is FrontendHandlerEvent.ConfigSent,

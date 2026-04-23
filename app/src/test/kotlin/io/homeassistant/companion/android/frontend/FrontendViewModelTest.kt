@@ -10,7 +10,9 @@ import io.homeassistant.companion.android.common.util.GestureDirection
 import io.homeassistant.companion.android.frontend.download.DownloadResult
 import io.homeassistant.companion.android.frontend.download.FrontendDownloadManager
 import io.homeassistant.companion.android.frontend.error.FrontendConnectionError
+import io.homeassistant.companion.android.frontend.externalbus.FrontendExternalBusRepository
 import io.homeassistant.companion.android.frontend.externalbus.incoming.HapticType
+import io.homeassistant.companion.android.frontend.externalbus.outgoing.ResultMessage
 import io.homeassistant.companion.android.frontend.gesture.FrontendGestureHandler
 import io.homeassistant.companion.android.frontend.gesture.GestureResult
 import io.homeassistant.companion.android.frontend.handler.FrontendBusObserver
@@ -41,6 +43,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -58,6 +61,7 @@ class FrontendViewModelTest {
 
     private val webViewClientFactory: HAWebViewClientFactory = mockk(relaxed = true)
     private val frontendBusObserver: FrontendBusObserver = mockk(relaxed = true)
+    private val externalBusRepository: FrontendExternalBusRepository = mockk(relaxed = true)
     private val urlManager: FrontendUrlManager = mockk(relaxed = true)
     private val connectivityCheckRepository: ConnectivityCheckRepository = mockk(relaxed = true)
     private val permissionManager: PermissionManager = mockk(relaxed = true)
@@ -84,6 +88,7 @@ class FrontendViewModelTest {
             initialPath = path,
             webViewClientFactory = webViewClientFactory,
             frontendBusObserver = frontendBusObserver,
+            externalBusRepository = externalBusRepository,
             urlManager = urlManager,
             connectivityCheckRepository = connectivityCheckRepository,
             permissionManager = permissionManager,
@@ -628,6 +633,44 @@ class FrontendViewModelTest {
 
             assertTrue(events.any { it is FrontendEvent.NavigateToAssistSettings })
             job.cancel()
+        }
+
+        @Test
+        fun `Given WriteNfcTag handler event when collected then NavigateToNfcWrite is emitted`() = runTest {
+            val messageFlow = MutableSharedFlow<FrontendHandlerEvent>()
+            every { frontendBusObserver.messageResults() } returns messageFlow
+            every { urlManager.serverUrlFlow(any(), any()) } returns flowOf(
+                UrlLoadResult.Success(url = testUrlWithAuth, serverId = serverId),
+            )
+
+            val viewModel = createViewModel()
+
+            viewModel.events.test {
+                advanceTimeBy(CONNECTION_TIMEOUT - 1.seconds)
+
+                messageFlow.emit(FrontendHandlerEvent.WriteNfcTag(messageId = 42, tagId = "tag-abc"))
+
+                assertEquals(FrontendEvent.NavigateToNfcWrite(messageId = 42, tagId = "tag-abc"), awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+        @Test
+        fun `Given onNfcWriteCompleted when called then sends empty-result ResultMessage back to frontend`() = runTest {
+            every { urlManager.serverUrlFlow(any(), any()) } returns flowOf(
+                UrlLoadResult.Success(url = testUrlWithAuth, serverId = serverId),
+            )
+
+            val viewModel = createViewModel()
+
+            viewModel.onNfcWriteCompleted(messageId = 42)
+            advanceUntilIdle()
+
+            coVerify {
+                externalBusRepository.send(
+                    ResultMessage(id = 42, success = true, result = JsonObject(emptyMap())),
+                )
+            }
         }
     }
 
