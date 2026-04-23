@@ -91,7 +91,11 @@ class ManageFavoritesVehicleScreen(
         val reservedRows = reservedRowsWithoutNextPage + if (hasNextPage) 1 else 0
         val itemsPerPage = (listLimit - reservedRows).coerceAtLeast(1)
         val toIndex = minOf(fromIndex + itemsPerPage, entities.size)
-        val pageEntities = if (isLoaded) entities.subList(fromIndex, toIndex) else emptyList()
+        val pageEntities = if (isLoaded && fromIndex < entities.size) {
+            entities.subList(fromIndex, toIndex)
+        } else {
+            emptyList()
+        }
 
         val listBuilder = ItemList.Builder()
 
