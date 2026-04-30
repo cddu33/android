@@ -1,6 +1,9 @@
 package io.homeassistant.companion.android.frontend
 
 import android.net.Uri
+import android.webkit.JsResult
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
 import app.cash.turbine.test
 import io.homeassistant.companion.android.common.R as commonR
 import io.homeassistant.companion.android.common.data.connectivity.ConnectivityCheckRepository
@@ -9,12 +12,15 @@ import io.homeassistant.companion.android.common.data.connectivity.ConnectivityC
 import io.homeassistant.companion.android.common.data.prefs.PrefsRepository
 import io.homeassistant.companion.android.common.data.prefs.ZoomSettings
 import io.homeassistant.companion.android.common.util.GestureDirection
+import io.homeassistant.companion.android.frontend.dialog.FrontendDialog
+import io.homeassistant.companion.android.frontend.dialog.FrontendDialogManager
 import io.homeassistant.companion.android.frontend.download.DownloadResult
 import io.homeassistant.companion.android.frontend.download.FrontendDownloadManager
 import io.homeassistant.companion.android.frontend.error.FrontendConnectionError
 import io.homeassistant.companion.android.frontend.externalbus.FrontendExternalBusRepository
 import io.homeassistant.companion.android.frontend.externalbus.incoming.HapticType
 import io.homeassistant.companion.android.frontend.externalbus.outgoing.ResultMessage
+import io.homeassistant.companion.android.frontend.filechooser.FileChooserManager
 import io.homeassistant.companion.android.frontend.gesture.FrontendGestureHandler
 import io.homeassistant.companion.android.frontend.gesture.GestureResult
 import io.homeassistant.companion.android.frontend.handler.FrontendBusObserver
@@ -48,6 +54,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -83,11 +91,16 @@ class FrontendViewModelTest {
         every { frontendBusObserver.messageResults() } returns emptyFlow()
         every { frontendBusObserver.webViewActions() } returns emptyFlow()
         every { connectivityCheckRepository.runChecks(any()) } returns flowOf(ConnectivityCheckState())
+        // Default: storage permission available so download tests don't bail out at the permission gate.
+        // Tests that exercise the deny path override this explicitly.
+        coEvery { permissionManager.checkStoragePermissionForDownload() } returns true
     }
 
     private fun createViewModel(
         serverId: Int = this.serverId,
         path: String? = null,
+        dialogManager: FrontendDialogManager = FrontendDialogManager(),
+        fileChooserManager: FileChooserManager = FileChooserManager(),
     ): FrontendViewModel {
         return FrontendViewModel(
             initialServerId = serverId,
@@ -102,6 +115,8 @@ class FrontendViewModelTest {
             downloadManager = downloadManager,
             gestureHandler = gestureHandler,
             prefsRepository = prefsRepository,
+            dialogManager = dialogManager,
+            fileChooserManager = fileChooserManager,
         )
     }
 
@@ -848,20 +863,6 @@ class FrontendViewModelTest {
 
             coVerify { permissionManager.checkNotificationPermission(serverId) }
         }
-
-        @Test
-        fun `Given permission dismissed then delegates to permission manager`() = runTest {
-            every { urlManager.serverUrlFlow(any(), any()) } returns flowOf(
-                UrlLoadResult.Success(url = testUrlWithAuth, serverId = serverId),
-            )
-
-            val viewModel = createViewModel()
-            advanceUntilIdle()
-
-            viewModel.clearPendingPermissionRequest()
-
-            verify { permissionManager.clearPendingPermissionRequest() }
-        }
     }
 
     @Nested
@@ -890,10 +891,12 @@ class FrontendViewModelTest {
                     currentUrlFlow = any(),
                     onFrontendError = any(),
                     onCrash = any(),
+                    onUrlIntercepted = any(),
                     onPageFinished = any(),
                 )
             } answers {
-                capturedPageFinished = lastArg()
+                // onPageFinished is the 5th of the 6 named arguments (zero-based index 4)
+                capturedPageFinished = arg(4)
                 mockk(relaxed = true)
             }
 
@@ -965,6 +968,181 @@ class FrontendViewModelTest {
 
                 cancelAndIgnoreRemainingEvents()
             }
+        }
+    }
+
+    @Nested
+    inner class JsConfirm {
+
+        private fun captureJsConfirmCallback(): Pair<FrontendViewModel, (String, JsResult) -> Boolean> {
+            val viewModel = createViewModel()
+            val client = viewModel.webChromeClient
+            val callback: (String, JsResult) -> Boolean = { message, result ->
+                // view and url are unused by HAWebChromeClient when message and result are non-null
+                client.onJsConfirm(null, null, message, result)
+            }
+            return viewModel to callback
+        }
+
+        @Test
+        fun `Given JS confirm received then dialog is exposed via pendingDialog`() = runTest {
+            every { urlManager.serverUrlFlow(any(), any()) } returns flowOf(
+                UrlLoadResult.Success(url = testUrlWithAuth, serverId = serverId),
+            )
+
+            val (viewModel, triggerJsConfirm) = captureJsConfirmCallback()
+            advanceUntilIdle()
+
+            triggerJsConfirm("Are you sure?", mockk(relaxed = true))
+            advanceUntilIdle()
+
+            val dialog = viewModel.pendingDialog.value
+            assertInstanceOf(FrontendDialog.Confirm::class.java, dialog)
+            assertEquals("Are you sure?", (dialog as FrontendDialog.Confirm).message)
+        }
+
+        @Test
+        fun `Given dialog confirmed then JsResult is confirmed and slot clears`() = runTest {
+            every { urlManager.serverUrlFlow(any(), any()) } returns flowOf(
+                UrlLoadResult.Success(url = testUrlWithAuth, serverId = serverId),
+            )
+
+            val (viewModel, triggerJsConfirm) = captureJsConfirmCallback()
+            advanceUntilIdle()
+            val jsResult: JsResult = mockk(relaxed = true)
+
+            triggerJsConfirm("Are you sure?", jsResult)
+            advanceUntilIdle()
+            (viewModel.pendingDialog.value as FrontendDialog.Confirm).onConfirm()
+            advanceUntilIdle()
+
+            verify { jsResult.confirm() }
+            assertEquals(null, viewModel.pendingDialog.value)
+        }
+
+        @Test
+        fun `Given dialog cancelled then JsResult is cancelled and slot clears`() = runTest {
+            every { urlManager.serverUrlFlow(any(), any()) } returns flowOf(
+                UrlLoadResult.Success(url = testUrlWithAuth, serverId = serverId),
+            )
+
+            val (viewModel, triggerJsConfirm) = captureJsConfirmCallback()
+            advanceUntilIdle()
+            val jsResult: JsResult = mockk(relaxed = true)
+
+            triggerJsConfirm("Are you sure?", jsResult)
+            advanceUntilIdle()
+            (viewModel.pendingDialog.value as FrontendDialog.Confirm).onCancel()
+            advanceUntilIdle()
+
+            verify { jsResult.cancel() }
+            assertEquals(null, viewModel.pendingDialog.value)
+        }
+
+        @Test
+        fun `Given a dialog already shown when second JS confirm arrives then it queues until first is resolved`() = runTest {
+            every { urlManager.serverUrlFlow(any(), any()) } returns flowOf(
+                UrlLoadResult.Success(url = testUrlWithAuth, serverId = serverId),
+            )
+
+            val (viewModel, triggerJsConfirm) = captureJsConfirmCallback()
+            advanceUntilIdle()
+            val firstResult: JsResult = mockk(relaxed = true)
+            val secondResult: JsResult = mockk(relaxed = true)
+
+            triggerJsConfirm("first", firstResult)
+            advanceUntilIdle()
+            triggerJsConfirm("second", secondResult)
+            advanceUntilIdle()
+
+            // Slot is still holding the first dialog; the second has not overwritten it.
+            assertEquals("first", (viewModel.pendingDialog.value as FrontendDialog.Confirm).message)
+
+            (viewModel.pendingDialog.value as FrontendDialog.Confirm).onConfirm()
+            advanceUntilIdle()
+            verify { firstResult.confirm() }
+
+            assertEquals("second", (viewModel.pendingDialog.value as FrontendDialog.Confirm).message)
+            verify(exactly = 0) { secondResult.confirm() }
+            verify(exactly = 0) { secondResult.cancel() }
+        }
+    }
+
+    @Nested
+    inner class FileChooser {
+
+        @Test
+        fun `Given file chooser triggered then pendingFileChooser exposes the params`() = runTest {
+            every { urlManager.serverUrlFlow(any(), any()) } returns flowOf(
+                UrlLoadResult.Success(url = testUrlWithAuth, serverId = serverId),
+            )
+
+            val viewModel = createViewModel()
+
+            val filePathCallback = mockk<ValueCallback<Array<Uri>>>(relaxed = true)
+            val fileChooserParams = mockk<WebChromeClient.FileChooserParams>(relaxed = true)
+
+            val handled = viewModel.webChromeClient.onShowFileChooser(
+                mockk(relaxed = true),
+                filePathCallback,
+                fileChooserParams,
+            )
+            advanceUntilIdle()
+
+            assertTrue(handled)
+            val pending = viewModel.pendingFileChooser.value
+            assertNotNull(pending)
+            assertTrue(pending!!.fileChooserParams === fileChooserParams)
+        }
+
+        @Test
+        fun `Given pending file chooser when result delivered then filePathCallback receives uris and slot clears`() = runTest {
+            every { urlManager.serverUrlFlow(any(), any()) } returns flowOf(
+                UrlLoadResult.Success(url = testUrlWithAuth, serverId = serverId),
+            )
+
+            val viewModel = createViewModel()
+            val filePathCallback = mockk<ValueCallback<Array<Uri>>>(relaxed = true)
+
+            viewModel.webChromeClient.onShowFileChooser(
+                mockk(relaxed = true),
+                filePathCallback,
+                mockk(relaxed = true),
+            )
+            advanceUntilIdle()
+
+            val pending = viewModel.pendingFileChooser.value
+            assertNotNull(pending)
+
+            val uris = arrayOf(mockk<Uri>())
+            pending!!.onResult(uris)
+            advanceUntilIdle()
+
+            verify { filePathCallback.onReceiveValue(uris) }
+            assertNull(viewModel.pendingFileChooser.value)
+        }
+
+        @Test
+        fun `Given pending file chooser when user cancels then filePathCallback receives null and slot clears`() = runTest {
+            every { urlManager.serverUrlFlow(any(), any()) } returns flowOf(
+                UrlLoadResult.Success(url = testUrlWithAuth, serverId = serverId),
+            )
+
+            val viewModel = createViewModel()
+            val filePathCallback = mockk<ValueCallback<Array<Uri>>>(relaxed = true)
+
+            viewModel.webChromeClient.onShowFileChooser(
+                mockk(relaxed = true),
+                filePathCallback,
+                mockk(relaxed = true),
+            )
+            advanceUntilIdle()
+
+            viewModel.pendingFileChooser.value!!.onResult(null)
+            advanceUntilIdle()
+
+            verify { filePathCallback.onReceiveValue(null) }
+            assertNull(viewModel.pendingFileChooser.value)
         }
     }
 
@@ -1135,13 +1313,11 @@ class FrontendViewModelTest {
         }
 
         @Test
-        fun `Given storage permission required when download requested then does not call downloadManager`() = runTest {
+        fun `Given storage permission denied when download requested then does not call downloadManager`() = runTest {
             every { urlManager.serverUrlFlow(any(), any()) } returns flowOf(
                 UrlLoadResult.Success(url = testUrlWithAuth, serverId = serverId),
             )
-            coEvery {
-                permissionManager.checkStoragePermissionForDownload(any())
-            } returns true
+            coEvery { permissionManager.checkStoragePermissionForDownload() } returns false
 
             val viewModel = createViewModel()
             advanceTimeBy(CONNECTION_TIMEOUT - 1.seconds)
@@ -1157,17 +1333,12 @@ class FrontendViewModelTest {
         }
 
         @Test
-        fun `Given storage permission required when onGranted called then retries download`() = runTest {
+        fun `Given storage permission granted when download requested then proceeds with download`() = runTest {
             every { urlManager.serverUrlFlow(any(), any()) } returns flowOf(
                 UrlLoadResult.Success(url = testUrlWithAuth, serverId = serverId),
             )
-            val onGrantedSlot = mutableListOf<() -> Unit>()
-            coEvery {
-                permissionManager.checkStoragePermissionForDownload(capture(onGrantedSlot))
-            } returns true
-            coEvery {
-                downloadManager.downloadFile(any(), any(), any(), any())
-            } returns DownloadResult.Forwarded
+            coEvery { permissionManager.checkStoragePermissionForDownload() } returns true
+            coEvery { downloadManager.downloadFile(any(), any(), any(), any()) } returns DownloadResult.Forwarded
 
             val viewModel = createViewModel()
             advanceTimeBy(CONNECTION_TIMEOUT - 1.seconds)
@@ -1177,14 +1348,6 @@ class FrontendViewModelTest {
                 contentDisposition = "attachment",
                 mimetype = "application/pdf",
             )
-
-            coVerify(exactly = 0) { downloadManager.downloadFile(any(), any(), any(), any()) }
-
-            // Simulate permission granted: onGranted retries the download
-            coEvery {
-                permissionManager.checkStoragePermissionForDownload(any())
-            } returns false
-            onGrantedSlot.last().invoke()
             advanceUntilIdle()
 
             coVerify {

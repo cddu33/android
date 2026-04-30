@@ -11,12 +11,15 @@ import io.homeassistant.companion.android.common.data.connectivity.ConnectivityC
 import io.homeassistant.companion.android.common.data.connectivity.ConnectivityCheckState
 import io.homeassistant.companion.android.common.data.prefs.PrefsRepository
 import io.homeassistant.companion.android.common.util.GestureDirection
+import io.homeassistant.companion.android.frontend.dialog.FrontendDialogManager
 import io.homeassistant.companion.android.frontend.download.DownloadResult
 import io.homeassistant.companion.android.frontend.download.FrontendDownloadManager
 import io.homeassistant.companion.android.frontend.error.FrontendConnectionError
 import io.homeassistant.companion.android.frontend.error.FrontendConnectionErrorStateProvider
 import io.homeassistant.companion.android.frontend.externalbus.FrontendExternalBusRepository
 import io.homeassistant.companion.android.frontend.externalbus.outgoing.ResultMessage
+import io.homeassistant.companion.android.frontend.filechooser.FileChooserManager
+import io.homeassistant.companion.android.frontend.filechooser.FileChooserRequest
 import io.homeassistant.companion.android.frontend.gesture.FrontendGestureHandler
 import io.homeassistant.companion.android.frontend.gesture.GestureResult
 import io.homeassistant.companion.android.frontend.handler.FrontendBusObserver
@@ -80,6 +83,8 @@ internal class FrontendViewModel @VisibleForTesting constructor(
     private val downloadManager: FrontendDownloadManager,
     private val gestureHandler: FrontendGestureHandler,
     private val prefsRepository: PrefsRepository,
+    private val dialogManager: FrontendDialogManager,
+    private val fileChooserManager: FileChooserManager,
 ) : ViewModel(),
     FrontendConnectionErrorStateProvider {
 
@@ -96,6 +101,8 @@ internal class FrontendViewModel @VisibleForTesting constructor(
         downloadManager: FrontendDownloadManager,
         gestureHandler: FrontendGestureHandler,
         prefsRepository: PrefsRepository,
+        dialogManager: FrontendDialogManager,
+        fileChooserManager: FileChooserManager,
     ) : this(
         initialServerId = savedStateHandle.toRoute<FrontendRoute>().serverId,
         initialPath = savedStateHandle.toRoute<FrontendRoute>().path,
@@ -109,6 +116,8 @@ internal class FrontendViewModel @VisibleForTesting constructor(
         downloadManager = downloadManager,
         gestureHandler = gestureHandler,
         prefsRepository = prefsRepository,
+        dialogManager = dialogManager,
+        fileChooserManager = fileChooserManager,
     )
 
     /**
@@ -188,16 +197,34 @@ internal class FrontendViewModel @VisibleForTesting constructor(
         onPageFinished = ::onPageFinished,
     )
 
+    /** The current pending file chooser request from the WebView, or null if none. */
+    val pendingFileChooser: StateFlow<FileChooserRequest?> = fileChooserManager.pendingFileChooser
+
     val webChromeClient: HAWebChromeClient = HAWebChromeClient(
         onPermissionRequest = { request ->
             viewModelScope.launch {
                 permissionManager.onWebViewPermissionRequest(request)
             }
         },
+        onJsConfirm = { message, jsResult ->
+            viewModelScope.launch {
+                if (dialogManager.showJsConfirm(message)) jsResult.confirm() else jsResult.cancel()
+            }
+            true
+        },
+        onShowFileChooser = { filePathCallback, fileChooserParams ->
+            viewModelScope.launch {
+                filePathCallback.onReceiveValue(fileChooserManager.pickFiles(fileChooserParams))
+            }
+            true
+        },
     )
 
     /** The current pending permission request that needs user approval, or null if none. */
     val pendingPermissionRequest = permissionManager.pendingPermissionRequest
+
+    /** The current pending dialog over the WebView, or null if none. */
+    val pendingDialog = dialogManager.pendingDialog
 
     private var connectivityCheckJob: Job? = null
 
@@ -301,13 +328,11 @@ internal class FrontendViewModel @VisibleForTesting constructor(
     /**
      * Handles a download request from the WebView.
      *
-     * On pre-Q devices, checks for [android.Manifest.permission.WRITE_EXTERNAL_STORAGE]
-     * before proceeding. If the permission is not granted, the request is deferred and the
-     * system permission dialog is triggered via [pendingPermissionRequest]. The download
-     * is retried automatically when permission is granted.
+     * On pre-Q devices, awaits the storage permission via [PermissionManager.checkStoragePermissionForDownload]
+     * before proceeding. If the user declines, the download is silently dropped.
      *
-     * Delegates to [FrontendDownloadManager] to dispatch the download based on URI scheme,
-     * then processes the [DownloadResult] to emit appropriate UI events.
+     * Delegates to [FrontendDownloadManager] to dispatch the download based on URI scheme, then
+     * processes the [DownloadResult] to emit appropriate UI events.
      *
      * @param url The URL of the file to download
      * @param contentDisposition The Content-Disposition header value
@@ -315,12 +340,7 @@ internal class FrontendViewModel @VisibleForTesting constructor(
      */
     fun onDownloadRequested(url: String, contentDisposition: String, mimetype: String) {
         viewModelScope.launch {
-            if (permissionManager.checkStoragePermissionForDownload {
-                    onDownloadRequested(url = url, contentDisposition = contentDisposition, mimetype = mimetype)
-                }
-            ) {
-                return@launch
-            }
+            if (!permissionManager.checkStoragePermissionForDownload()) return@launch
 
             val result = downloadManager.downloadFile(
                 url = url,
@@ -330,11 +350,6 @@ internal class FrontendViewModel @VisibleForTesting constructor(
             )
             handleDownloadResult(result)
         }
-    }
-
-    /** Clears the current pending permission request from the slot. */
-    fun clearPendingPermissionRequest() {
-        permissionManager.clearPendingPermissionRequest()
     }
 
     /**
