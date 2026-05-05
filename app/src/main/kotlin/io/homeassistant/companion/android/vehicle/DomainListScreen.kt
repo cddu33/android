@@ -75,8 +75,9 @@ class DomainListScreen(
             if (isAutomotive && !isDrivingOptimized) {
                 if (BuildConfig.FLAVOR != "full") {
                     headerBuilder.addEndHeaderAction(nativeModeAction(carContext))
-                } else {
-                    headerBuilder.addEndHeaderAction(
+                } 
+
+                headerBuilder.addEndHeaderAction(
                         getManageFavoritesAction(
                             carContext,
                             screenManager,
@@ -85,7 +86,8 @@ class DomainListScreen(
                             prefsRepository,
                         ),
                     )
-                }
+                    
+                
             }
             setHeader(headerBuilder.build())
             val domainBuild = domainList.build()

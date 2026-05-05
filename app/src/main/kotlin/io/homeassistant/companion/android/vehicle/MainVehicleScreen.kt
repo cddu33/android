@@ -221,8 +221,8 @@ class MainVehicleScreen(
         if (isAutomotive && !isDrivingOptimized) {
             if (BuildConfig.FLAVOR != "full") {
                 headerBuilder.addEndHeaderAction(nativeModeAction(carContext))
-            } else {
-                headerBuilder.addEndHeaderAction(
+            }
+            headerBuilder.addEndHeaderAction(
                     getManageFavoritesAction(
                         carContext,
                         screenManager,
@@ -231,7 +231,8 @@ class MainVehicleScreen(
                         prefsRepository,
                     ),
                 )
-            }
+               
+            
         }
         headerBuilder.addEndHeaderAction(refreshAction)
 
