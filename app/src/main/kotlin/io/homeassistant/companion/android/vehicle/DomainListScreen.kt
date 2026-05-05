@@ -85,7 +85,7 @@ class DomainListScreen(
                         allEntities,
                         prefsRepository,
                     ),
-                )                
+                )
             }
             setHeader(headerBuilder.build())
             val domainBuild = domainList.build()

@@ -132,11 +132,10 @@ class ManageFavoritesVehicleScreen(
         return listBuilder
     }
 
-    private fun buildNavigationRow(titleRes: Int, onClick: () -> Unit): Row =
-        Row.Builder()
-            .setTitle(carContext.getString(titleRes))
-            .setOnClickListener(onClick)
-            .build()
+    private fun buildNavigationRow(titleRes: Int, onClick: () -> Unit): Row = Row.Builder()
+        .setTitle(carContext.getString(titleRes))
+        .setOnClickListener(onClick)
+        .build()
 
     private fun buildEntityRow(entity: Entity): Row {
         val isFavorite = favoritesList.any {

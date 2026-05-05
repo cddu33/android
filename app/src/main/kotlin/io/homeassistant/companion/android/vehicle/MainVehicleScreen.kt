@@ -230,7 +230,7 @@ class MainVehicleScreen(
                     allEntities,
                     prefsRepository,
                 ),
-            )            
+            )
         }
         headerBuilder.addEndHeaderAction(refreshAction)
 
