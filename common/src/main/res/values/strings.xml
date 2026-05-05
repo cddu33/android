@@ -1238,8 +1238,8 @@
     <string name="android_automotive">Android Automotive</string>
     <string name="android_automotive_favorites">Driving favorites</string>
     <string name="aa_manage_favorites">Manage favorites</string>
-    <string name="aa_previous_page">← Previous page</string>
-    <string name="aa_next_page">Next page →</string>
+    <string name="aa_previous_page">Previous page</string>
+    <string name="aa_next_page">Next page</string>
     <string name="alarm_control_panels">Alarm Control Panels</string>
     <string name="state_triggered">Triggered</string>
     <string name="state_disarmed">Disarmed</string>
