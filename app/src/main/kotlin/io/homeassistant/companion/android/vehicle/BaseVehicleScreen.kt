@@ -11,11 +11,16 @@ import io.homeassistant.companion.android.common.util.isAutomotive
 abstract class BaseVehicleScreen(carContext: CarContext) : Screen(carContext) {
     private var car: Car? = null
     private var carRestrictionManager: CarUxRestrictionsManager? = null
-    protected val isDrivingOptimized
-        get() = carRestrictionManager
+    protected val isDrivingOptimized: Boolean
+    get() = try {
+        carRestrictionManager
             ?.currentCarUxRestrictions
             ?.isRequiresDistractionOptimization
             ?: false
+    } catch (e: Exception) {
+        Timber.e(e, "Failed to get driving optimization state")
+        false
+    }
 
     init {
         lifecycle.addObserver(object : DefaultLifecycleObserver {
