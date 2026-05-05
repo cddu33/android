@@ -18,7 +18,6 @@ abstract class BaseVehicleScreen(carContext: CarContext) : Screen(carContext) {
             ?.isRequiresDistractionOptimization
             ?: false
     } catch (e: Exception) {
-        Timber.e(e, "Failed to get driving optimization state")
         false
     }
 
