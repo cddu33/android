@@ -19,6 +19,8 @@ import io.homeassistant.companion.android.util.vehicle.getHeaderBuilder
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * A Car App screen that allows users to manage their automotive favorites when the vehicle is
@@ -39,16 +41,16 @@ class ManageFavoritesVehicleScreen(
     private var favoritesList: List<AutoFavorite> = emptyList()
     private var isLoaded = false
     private var page = 0
+    private val toggleMutex = Mutex()
 
     init {
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 favoritesList = prefsRepository.getAutoFavorites()
                 allEntities.collect { entityMap ->
-                    val currentServerId = serverId.value
                     val favoriteEntityIds = favoritesList
                         .asSequence()
-                        .filter { it.serverId == currentServerId }
+                        .filter { it.serverId == serverId.value }
                         .map { it.entityId }
                         .toSet()
 
@@ -59,12 +61,12 @@ class ManageFavoritesVehicleScreen(
                                 favoriteEntityIds.contains(entity.entityId)
                             }.thenBy { it.attributes["friendly_name"]?.toString() ?: it.entityId },
                         )
-                    if (newEntities.map { it.entityId } != entities.map { it.entityId }) {
-                        page = 0
-                    }
+                    val listChanged = newEntities.map { it.entityId } != entities.map { it.entityId }
+                    if (listChanged) page = 0
+                    val shouldInvalidate = !isLoaded || listChanged
                     entities = newEntities
                     isLoaded = true
-                    invalidate()
+                    if (shouldInvalidate) invalidate()
                 }
             }
         }
@@ -82,91 +84,44 @@ class ManageFavoritesVehicleScreen(
     override fun onGetTemplate(): Template {
         val listLimit = carContext.getCarService(ConstraintManager::class.java)
             .getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_LIST)
-
-        val hasPreviousPage = page > 0
-        val reservedRowsWithoutNextPage = if (hasPreviousPage) 1 else 0
-        val maxItemsWithoutNextPage = (listLimit - reservedRowsWithoutNextPage).coerceAtLeast(1)
-        val fromIndex = page * maxItemsWithoutNextPage
-        val hasNextPage = fromIndex + maxItemsWithoutNextPage < entities.size
-        val reservedRows = reservedRowsWithoutNextPage + if (hasNextPage) 1 else 0
-        val itemsPerPage = (listLimit - reservedRows).coerceAtLeast(1)
-        val toIndex = minOf(fromIndex + itemsPerPage, entities.size)
-        val pageEntities = if (isLoaded && fromIndex < entities.size) {
-            entities.subList(fromIndex, toIndex)
+        val pageSlice = computePageSlice(entities.size, page, listLimit)
+        val pageEntities = if (isLoaded && pageSlice.fromIndex < entities.size) {
+            entities.subList(pageSlice.fromIndex, pageSlice.toIndex)
         } else {
             emptyList()
         }
 
+        return ListTemplate.Builder()
+            .setHeader(carContext.getHeaderBuilder(commonR.string.android_automotive_favorites).build())
+            .setLoading(!isLoaded)
+            .apply {
+                if (isLoaded) setSingleList(buildList(pageEntities, pageSlice).build())
+            }
+            .build()
+    }
+
+    private fun buildList(pageEntities: List<Entity>, pageSlice: PageSlice): ItemList.Builder {
         val listBuilder = ItemList.Builder()
 
-        if (hasPreviousPage) {
+        if (pageSlice.hasPreviousPage) {
             listBuilder.addItem(
-                Row.Builder()
-                    .setTitle(carContext.getString(commonR.string.aa_previous_page))
-                    .setOnClickListener {
-                        page--
-                        invalidate()
-                    }
-                    .build(),
+                buildNavigationRow(commonR.string.aa_previous_page) {
+                    page--
+                    invalidate()
+                },
             )
         }
 
         pageEntities.forEach { entity ->
-            val isFavorite = favoritesList.any {
-                it.serverId == serverId.value && it.entityId == entity.entityId
-            }
-            val friendlyName = entity.attributes["friendly_name"]?.toString() ?: entity.entityId
-            val domainLabel = SUPPORTED_DOMAINS_WITH_STRING[entity.domain]
-                ?.let { carContext.getString(it) }
-                ?: entity.domain
-
-            listBuilder.addItem(
-                Row.Builder()
-                    .setTitle(friendlyName)
-                    .addText(domainLabel)
-                    .setEnabled(!isDrivingOptimized)
-                    .setToggle(
-                        Toggle.Builder { isChecked ->
-                            lifecycleScope.launch {
-                                val favorite = AutoFavorite(
-                                    serverId = serverId.value,
-                                    entityId = entity.entityId,
-                                )
-                                if (isChecked) {
-                                    prefsRepository.addAutoFavorite(favorite)
-                                } else {
-                                    val updated = favoritesList.filterNot { it == favorite }
-                                    prefsRepository.setAutoFavorites(updated)
-                                }
-                                favoritesList = prefsRepository.getAutoFavorites()
-                                val favoriteEntityIds = favoritesList
-                                    .filter { it.serverId == serverId.value }
-                                    .map { it.entityId }
-                                    .toSet()
-                                entities = entities.sortedByDescending { updatedEntity ->
-                                    updatedEntity.entityId in favoriteEntityIds
-                                }
-                                val maxPage = if (entities.isEmpty()) 0 else (entities.size - 1) / listLimit
-                                page = page.coerceIn(minimumValue = 0, maximumValue = maxPage)
-                                invalidate()
-                            }
-                        }
-                            .setChecked(isFavorite)
-                            .build(),
-                    )
-                    .build(),
-            )
+            listBuilder.addItem(buildEntityRow(entity))
         }
 
-        if (hasNextPage) {
+        if (pageSlice.hasNextPage) {
             listBuilder.addItem(
-                Row.Builder()
-                    .setTitle(carContext.getString(commonR.string.aa_next_page))
-                    .setOnClickListener {
-                        page++
-                        invalidate()
-                    }
-                    .build(),
+                buildNavigationRow(commonR.string.aa_next_page) {
+                    page++
+                    invalidate()
+                },
             )
         }
 
@@ -174,10 +129,83 @@ class ManageFavoritesVehicleScreen(
             listBuilder.setNoItemsMessage(carContext.getString(commonR.string.no_supported_entities))
         }
 
-        return ListTemplate.Builder()
-            .setHeader(carContext.getHeaderBuilder(commonR.string.android_automotive_favorites).build())
-            .setLoading(!isLoaded)
-            .apply { if (isLoaded) setSingleList(listBuilder.build()) }
+        return listBuilder
+    }
+
+    private fun buildNavigationRow(titleRes: Int, onClick: () -> Unit): Row =
+        Row.Builder()
+            .setTitle(carContext.getString(titleRes))
+            .setOnClickListener(onClick)
+            .build()
+
+    private fun buildEntityRow(entity: Entity): Row {
+        val isFavorite = favoritesList.any {
+            it.serverId == serverId.value && it.entityId == entity.entityId
+        }
+        val friendlyName = entity.attributes["friendly_name"]?.toString() ?: entity.entityId
+        val domainLabel = SUPPORTED_DOMAINS_WITH_STRING[entity.domain]
+            ?.let { carContext.getString(it) }
+            ?: entity.domain
+
+        return Row.Builder()
+            .setTitle(friendlyName)
+            .addText(domainLabel)
+            .setToggle(
+                Toggle.Builder { isChecked ->
+                    lifecycleScope.launch {
+                        toggleMutex.withLock {
+                            val favorite = AutoFavorite(
+                                serverId = serverId.value,
+                                entityId = entity.entityId,
+                            )
+                            if (isChecked) {
+                                prefsRepository.addAutoFavorite(favorite)
+                            } else {
+                                prefsRepository.setAutoFavorites(
+                                    favoritesList.filterNot { it == favorite },
+                                )
+                            }
+                            favoritesList = prefsRepository.getAutoFavorites()
+                            val favoriteEntityIds = favoritesList
+                                .filter { it.serverId == serverId.value }
+                                .map { it.entityId }
+                                .toSet()
+                            entities = entities.sortedWith(
+                                compareByDescending<Entity> { it.entityId in favoriteEntityIds }
+                                    .thenBy { it.attributes["friendly_name"]?.toString() ?: it.entityId },
+                            )
+                            invalidate()
+                        }
+                    }
+                }
+                    .setChecked(isFavorite)
+                    .build(),
+            )
             .build()
     }
+}
+
+internal data class PageSlice(
+    val fromIndex: Int,
+    val toIndex: Int,
+    val hasPreviousPage: Boolean,
+    val hasNextPage: Boolean,
+)
+
+/**
+ * Computes the slice of entities to display for the given page.
+ *
+ * Always reserves 2 rows for navigation (previous/next), giving a consistent
+ * [itemsPerPage] across all pages and avoiding skipped entities.
+ */
+internal fun computePageSlice(totalItems: Int, page: Int, listLimit: Int): PageSlice {
+    val itemsPerPage = (listLimit - 2).coerceAtLeast(1)
+    val fromIndex = page * itemsPerPage
+    val toIndex = minOf(fromIndex + itemsPerPage, totalItems)
+    return PageSlice(
+        fromIndex = fromIndex,
+        toIndex = toIndex,
+        hasPreviousPage = page > 0,
+        hasNextPage = toIndex < totalItems,
+    )
 }
