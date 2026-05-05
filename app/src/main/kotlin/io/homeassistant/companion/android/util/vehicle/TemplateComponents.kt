@@ -132,6 +132,7 @@ fun getNavigationGridItem(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 fun getDomainList(
     domains: MutableSet<String>,
     carContext: CarContext,
@@ -217,6 +218,7 @@ fun getDomainList(
     return listBuilder
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 fun getDomainsGridItem(
     carContext: CarContext,
     screenManager: ScreenManager,
