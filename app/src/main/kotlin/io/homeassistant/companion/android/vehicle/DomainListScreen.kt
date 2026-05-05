@@ -75,19 +75,17 @@ class DomainListScreen(
             if (isAutomotive && !isDrivingOptimized) {
                 if (BuildConfig.FLAVOR != "full") {
                     headerBuilder.addEndHeaderAction(nativeModeAction(carContext))
-                } 
+                }
 
                 headerBuilder.addEndHeaderAction(
-                        getManageFavoritesAction(
-                            carContext,
-                            screenManager,
-                            serverId,
-                            allEntities,
-                            prefsRepository,
-                        ),
-                    )
-                    
-                
+                    getManageFavoritesAction(
+                        carContext,
+                        screenManager,
+                        serverId,
+                        allEntities,
+                        prefsRepository,
+                    ),
+                )                
             }
             setHeader(headerBuilder.build())
             val domainBuild = domainList.build()

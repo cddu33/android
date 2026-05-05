@@ -223,16 +223,14 @@ class MainVehicleScreen(
                 headerBuilder.addEndHeaderAction(nativeModeAction(carContext))
             }
             headerBuilder.addEndHeaderAction(
-                    getManageFavoritesAction(
-                        carContext,
-                        screenManager,
-                        serverId,
-                        allEntities,
-                        prefsRepository,
-                    ),
-                )
-               
-            
+                getManageFavoritesAction(
+                    carContext,
+                    screenManager,
+                    serverId,
+                    allEntities,
+                    prefsRepository,
+                ),
+            )            
         }
         headerBuilder.addEndHeaderAction(refreshAction)
 

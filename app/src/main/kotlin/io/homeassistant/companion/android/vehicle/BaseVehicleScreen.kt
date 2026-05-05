@@ -12,14 +12,14 @@ abstract class BaseVehicleScreen(carContext: CarContext) : Screen(carContext) {
     private var car: Car? = null
     private var carRestrictionManager: CarUxRestrictionsManager? = null
     protected val isDrivingOptimized: Boolean
-    get() = try {
-        carRestrictionManager
-            ?.currentCarUxRestrictions
-            ?.isRequiresDistractionOptimization
-            ?: false
-    } catch (e: Exception) {
-        false
-    }
+        get() = try {
+            carRestrictionManager
+                ?.currentCarUxRestrictions
+                ?.isRequiresDistractionOptimization
+                ?: false
+        } catch (e: Exception) {
+            false
+        }
 
     init {
         lifecycle.addObserver(object : DefaultLifecycleObserver {
