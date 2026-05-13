@@ -3,6 +3,7 @@ package io.homeassistant.companion.android.vehicle
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.car.app.CarContext
+import androidx.car.app.Screen
 import androidx.car.app.model.Action
 import androidx.car.app.model.CarColor
 import androidx.car.app.model.CarIcon
@@ -31,6 +32,7 @@ import io.homeassistant.companion.android.util.vehicle.getChangeServerGridItem
 import io.homeassistant.companion.android.util.vehicle.getDomainList
 import io.homeassistant.companion.android.util.vehicle.getHeaderBuilder
 import io.homeassistant.companion.android.util.vehicle.getNavigationGridItem
+import io.homeassistant.companion.android.util.vehicle.isDrivingDistracted
 import io.homeassistant.companion.android.util.vehicle.nativeModeAction
 import io.homeassistant.companion.android.util.vehicle.settingsAction
 import kotlinx.coroutines.CancellationException
@@ -51,7 +53,7 @@ class MainVehicleScreen(
     private val prefsRepository: PrefsRepository,
     private val onChangeServer: (Int) -> Unit,
     private val onRefresh: () -> Unit,
-) : BaseVehicleScreen(carContext) {
+) : Screen(carContext) {
 
     private var favoritesEntities: List<Entity> = listOf()
     private var entityRegistry: List<EntityRegistryResponse>? = null
@@ -135,10 +137,6 @@ class MainVehicleScreen(
         }
     }
 
-    override fun onDrivingOptimizedChanged(newState: Boolean) {
-        invalidate()
-    }
-
     override fun onGetTemplate(): Template {
         if (isLoggedIn != true) {
             return GridTemplate.Builder().apply {
@@ -218,7 +216,7 @@ class MainVehicleScreen(
             }.build()
 
         val headerBuilder = carContext.getHeaderBuilder(commonR.string.app_name, Action.APP_ICON)
-        if (isAutomotive && !isDrivingOptimized) {
+        if (isAutomotive && !carContext.isDrivingDistracted()) {
             if (BuildConfig.FLAVOR != "full") {
                 headerBuilder.addEndHeaderAction(nativeModeAction(carContext))
             }

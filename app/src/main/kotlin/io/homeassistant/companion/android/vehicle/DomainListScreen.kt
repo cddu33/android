@@ -3,6 +3,7 @@ package io.homeassistant.companion.android.vehicle
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.car.app.CarContext
+import androidx.car.app.Screen
 import androidx.car.app.model.GridTemplate
 import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
@@ -16,6 +17,7 @@ import io.homeassistant.companion.android.common.util.isAutomotive
 import io.homeassistant.companion.android.util.vehicle.SUPPORTED_DOMAINS
 import io.homeassistant.companion.android.util.vehicle.getDomainList
 import io.homeassistant.companion.android.util.vehicle.getHeaderBuilder
+import io.homeassistant.companion.android.util.vehicle.isDrivingDistracted
 import io.homeassistant.companion.android.util.vehicle.nativeModeAction
 import io.homeassistant.companion.android.util.vehicle.settingsAction
 import kotlinx.coroutines.flow.Flow
@@ -30,14 +32,10 @@ class DomainListScreen(
     private val allEntities: Flow<Map<String, Entity>>,
     private val prefsRepository: PrefsRepository,
     private val entityRegistry: List<EntityRegistryResponse>?,
-) : BaseVehicleScreen(carContext) {
+) : Screen(carContext) {
 
     private val domains = mutableSetOf<String>()
     private var domainsAdded = false
-
-    override fun onDrivingOptimizedChanged(newState: Boolean) {
-        invalidate()
-    }
 
     init {
         lifecycleScope.launch {
@@ -72,7 +70,7 @@ class DomainListScreen(
 
         return GridTemplate.Builder().apply {
             val headerBuilder = carContext.getHeaderBuilder(R.string.all_entities)
-            if (isAutomotive && !isDrivingOptimized) {
+            if (isAutomotive && !carContext.isDrivingDistracted()) {
                 if (BuildConfig.FLAVOR != "full") {
                     headerBuilder.addEndHeaderAction(nativeModeAction(carContext))
                 }
