@@ -113,3 +113,9 @@ dependencies {
 googleServices {
     disableVersionCheck = true
 }
+
+// Skip google-services processing for the 'perso' build type: no matching client in google-services.json (personal local build only).
+afterEvaluate {
+    tasks.matching { it.name.endsWith("PersoGoogleServices") }
+        .configureEach { enabled = false }
+}
