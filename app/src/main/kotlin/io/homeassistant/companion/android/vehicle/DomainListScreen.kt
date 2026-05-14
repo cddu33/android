@@ -17,6 +17,7 @@ import io.homeassistant.companion.android.common.util.isAutomotive
 import io.homeassistant.companion.android.util.vehicle.SUPPORTED_DOMAINS
 import io.homeassistant.companion.android.util.vehicle.getDomainList
 import io.homeassistant.companion.android.util.vehicle.getHeaderBuilder
+import io.homeassistant.companion.android.util.vehicle.isDrivingDistracted
 import io.homeassistant.companion.android.util.vehicle.nativeModeAction
 import io.homeassistant.companion.android.util.vehicle.settingsAction
 import kotlinx.coroutines.flow.Flow
@@ -69,7 +70,7 @@ class DomainListScreen(
 
         return GridTemplate.Builder().apply {
             val headerBuilder = carContext.getHeaderBuilder(R.string.all_entities)
-            if (isAutomotive && !isDrivingOptimized && BuildConfig.FLAVOR != "full") {
+            if (isAutomotive && !carContext.isDrivingDistracted() && BuildConfig.FLAVOR != "full") {
                 headerBuilder.addEndHeaderAction(nativeModeAction(carContext))
             }
             setHeader(headerBuilder.build())
