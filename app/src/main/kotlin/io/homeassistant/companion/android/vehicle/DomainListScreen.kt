@@ -74,6 +74,7 @@ class DomainListScreen(
                 if (BuildConfig.FLAVOR != "full") {
                     headerBuilder.addEndHeaderAction(nativeModeAction(carContext))
                 }
+                headerBuilder.addEndHeaderAction(settingsAction(carContext))
             }
             setHeader(headerBuilder.build())
             val domainBuild = domainList.build()
