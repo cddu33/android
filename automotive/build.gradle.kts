@@ -35,6 +35,15 @@ android {
         }
     }
 
+    buildTypes {
+        create("perso") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".perso"
+            versionNameSuffix = "-perso"
+            matchingFallbacks += listOf("release")
+        }
+    }
+
     sourceSets {
         getByName("main") {
             kotlin {
@@ -72,6 +81,11 @@ android {
             }
         }
         getByName("release") {
+            kotlin {
+                directories += "../app/src/release/kotlin"
+            }
+        }
+        getByName("perso") {
             kotlin {
                 directories += "../app/src/release/kotlin"
             }
