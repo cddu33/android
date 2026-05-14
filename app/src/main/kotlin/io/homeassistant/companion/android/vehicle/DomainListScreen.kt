@@ -70,8 +70,10 @@ class DomainListScreen(
 
         return GridTemplate.Builder().apply {
             val headerBuilder = carContext.getHeaderBuilder(R.string.all_entities)
-            if (isAutomotive && !carContext.isDrivingDistracted() && BuildConfig.FLAVOR != "full") {
-                headerBuilder.addEndHeaderAction(nativeModeAction(carContext))
+            if (isAutomotive && !carContext.isDrivingDistracted()) {
+                if (BuildConfig.FLAVOR != "full") {
+                    headerBuilder.addEndHeaderAction(nativeModeAction(carContext))
+                }
             }
             setHeader(headerBuilder.build())
             val domainBuild = domainList.build()
