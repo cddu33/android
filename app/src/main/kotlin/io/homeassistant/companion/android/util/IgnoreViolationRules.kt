@@ -22,6 +22,7 @@ val threadPolicyIgnoredViolationRules = listOf(
     IgnoreSamsungKnoxProKioskDiskRead,
     IgnoreAndroidAutoServiceConnectionDiskRead,
     IgnoreAndroidAutoRendererServiceDiskRead,
+    IgnoreAndroidAutoApiLevelsDiskRead,
     IgnoreMiuiFontSettingsDiskRead,
     IgnoreMiuiTurboSchedMonitorDiskRead,
     IgnoreChromiumKeyStoreDiskWrite,
@@ -197,6 +198,18 @@ private data object IgnoreAndroidAutoRendererServiceDiskRead : IgnoreViolationRu
         return violation.stackTrace.any {
             it.className == "androidx.car.app.activity.renderer.IRendererService\$Stub" &&
                 it.methodName == "onTransact"
+        }
+    }
+}
+
+private data object IgnoreAndroidAutoApiLevelsDiskRead : IgnoreViolationRule {
+    @RequiresApi(Build.VERSION_CODES.P)
+    override fun shouldIgnore(violation: Violation): Boolean {
+        if (violation !is DiskReadViolation) return false
+
+        return violation.stackTrace.any {
+            it.className == "androidx.car.app.versioning.CarAppApiLevels" &&
+                it.methodName == "getLatest"
         }
     }
 }
